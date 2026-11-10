@@ -1,0 +1,61 @@
+# Serviço Cadastro + Postgres próprio.
+#
+# A rede externa `oficina-local` e o Jaeger (`oficina-jaeger`) vêm do `docker-compose.infra.yml`
+# do repositório `oficina-mecanica-app`. Suba-o antes:
+#   docker compose -f docker-compose.infra.yml up -d      (no repo oficina-mecanica-app)
+#   docker compose up --build                             (neste repo)
+services:
+  oficina-cadastro:
+    build:
+      context: .
+      dockerfile: src/Bootstrap/Api/Dockerfile
+    container_name: oficina-cadastro
+    ports:
+      - "8082:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__Default=Host=oficina-cadastro-postgres;Port=5432;Username=oficina;Password=oficina-dev-pass;Database=cadastro;SSL Mode=Disable
+      - Jwt__Secret=docker-dev-secret-key-replace-in-prod-000
+      - Jwt__Audience=oficina-mecanica-api
+      - Jwt__ValidIssuers__0=oficina-mecanica-app
+      - Jwt__ValidIssuers__1=oficina-mecanica-auth
+      - OpenApi__Enabled=true
+      # OTLP: destino configurável por variável de ambiente padrão do OpenTelemetry (ADR-004).
+      # Aqui aponta para o Jaeger local do compose de infra; logs também são enviados a este
+      # endpoint, mas o Jaeger all-in-one não implementa o serviço OTLP de logs — essas
+      # tentativas falham em silêncio no self-diagnostics do OpenTelemetry.
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://oficina-jaeger:4317
+      - OTEL_SERVICE_NAME=oficina-mecanica-cadastro
+    depends_on:
+      oficina-cadastro-postgres:
+        condition: service_healthy
+    networks:
+      - oficina-local
+
+  oficina-cadastro-postgres:
+    image: postgres:16
+    restart: always
+    container_name: oficina-cadastro-postgres
+    environment:
+      POSTGRES_DB: cadastro
+      POSTGRES_USER: oficina
+      POSTGRES_PASSWORD: oficina-dev-pass
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oficina -d cadastro"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - cadastro_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - oficina-local
+
+volumes:
+  cadastro_postgres_data:
+
+networks:
+  oficina-local:
+    external: true

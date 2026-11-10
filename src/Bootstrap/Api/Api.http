@@ -1,0 +1,35 @@
+@Api_HostAddress = http://localhost:5294
+# Token JWT de papel Oficina, emitido pelo serviço de autenticação.
+@Token = cole-aqui-um-token-jwt
+@ClienteId = 00000000-0000-0000-0000-000000000000
+
+### Liveness
+GET {{Api_HostAddress}}/healthz/live
+
+### Readiness (inclui o check do PostgreSQL)
+GET {{Api_HostAddress}}/healthz/ready
+
+### Listar clientes
+GET {{Api_HostAddress}}/api/v1/clientes
+Authorization: Bearer {{Token}}
+Accept: application/json
+
+### Obter cliente por id
+GET {{Api_HostAddress}}/api/v1/clientes/{{ClienteId}}
+Authorization: Bearer {{Token}}
+Accept: application/json
+
+### Obter cliente por documento (somente dígitos)
+GET {{Api_HostAddress}}/api/v1/clientes/documento/12345678909
+Authorization: Bearer {{Token}}
+Accept: application/json
+
+### Listar veículos do cliente
+GET {{Api_HostAddress}}/api/v1/clientes/{{ClienteId}}/veiculos
+Authorization: Bearer {{Token}}
+Accept: application/json
+
+### Listar serviços
+GET {{Api_HostAddress}}/api/v1/servicos
+Authorization: Bearer {{Token}}
+Accept: application/json
