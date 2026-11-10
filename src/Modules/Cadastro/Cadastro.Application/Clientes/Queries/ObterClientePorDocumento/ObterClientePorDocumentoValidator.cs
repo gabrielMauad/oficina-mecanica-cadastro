@@ -8,7 +8,8 @@ public sealed class ObterClientePorDocumentoValidator : AbstractValidator<ObterC
     {
         RuleFor(x => x.Documento)
             .NotEmpty()
-            .Matches(@"^\d+$")
+            // Só dígitos ASCII 0-9 (\d aceitaria dígitos Unicode) e \z não aceita "\n" no final.
+            .Matches(@"\A[0-9]+\z")
             .WithMessage("Documento inválido. Informe somente dígitos.");
     }
 }

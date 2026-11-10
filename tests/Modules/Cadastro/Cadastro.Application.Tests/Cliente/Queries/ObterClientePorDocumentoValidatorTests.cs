@@ -24,6 +24,8 @@ public class ObterClientePorDocumentoValidatorTests
     [InlineData("11.222.333/0001-81")]
     [InlineData("abc12345678")]
     [InlineData("12345678909 ")]
+    [InlineData("12345678909\n")]
+    [InlineData("١٢٣٤٥")] // dígitos arábico-índicos (Unicode Nd)
     public void Validate_ShouldBeInvalid_WhenDocumentoIsNotOnlyDigits(string documento)
     {
         var result = _validator.Validate(new ObterClientePorDocumentoQuery(documento));
