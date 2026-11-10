@@ -1,0 +1,27 @@
+<Solution>
+  <Folder Name="/src/Bootstrap/">
+    <Project Path="src/Bootstrap/Api/Api.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Cadastro/">
+    <Project Path="src/Modules/Cadastro/Cadastro.Adapters/Cadastro.Adapters.csproj" />
+    <Project Path="src/Modules/Cadastro/Cadastro.Application/Cadastro.Application.csproj" />
+    <Project Path="src/Modules/Cadastro/Cadastro.Contracts/Cadastro.Contracts.csproj" />
+    <Project Path="src/Modules/Cadastro/Cadastro.Domain/Cadastro.Domain.csproj" />
+    <Project Path="src/Modules/Cadastro/Cadastro.Infrastructure/Cadastro.Infrastructure.csproj" />
+    <Project Path="src/Modules/Cadastro/Cadastro.Web/Cadastro.Web.csproj" />
+  </Folder>
+  <Folder Name="/src/SharedKernel/">
+    <Project Path="src/SharedKernel/SharedKernel.Application/SharedKernel.Application.csproj" />
+    <Project Path="src/SharedKernel/SharedKernel.Domain/SharedKernel.Domain.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/IntegrationTests/IntegrationTests.csproj" />
+  </Folder>
+  <Folder Name="/tests/SharedKernel/">
+    <Project Path="tests/SharedKernel/SharedKernel.Application.Tests/SharedKernel.Application.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Modules/Cadastro/">
+    <Project Path="tests/Modules/Cadastro/Cadastro.Application.Tests/Cadastro.Application.Tests.csproj" />
+    <Project Path="tests/Modules/Cadastro/Cadastro.Domain.Tests/Cadastro.Domain.Tests.csproj" />
+  </Folder>
+</Solution>
