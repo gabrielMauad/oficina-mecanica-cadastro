@@ -39,8 +39,8 @@ public sealed class HealthCheckReadinessDegradedTests : IAsyncLifetime
                     // Este teste monta o próprio WebApplicationFactory (não usa o
                     // OficinaMecanicaWebApplicationFactory compartilhado), então precisa repetir aqui
                     // as chaves que a configuração da aplicação exige no startup: issuer/audience são
-                    // obrigatórios na validação do JWT (RFC-001 §4.1) e a documentação OpenAPI/Scalar
-                    // fica desligada nos testes.
+                    // obrigatórios na validação do JWT (todo token precisa ter issuer aceito e a
+                    // audience da API) e a documentação OpenAPI/Scalar fica desligada nos testes.
                     ["Jwt:Audience"] = "oficina-mecanica-api",
                     ["Jwt:ValidIssuers:0"] = "oficina-mecanica-app",
                     ["Jwt:ValidIssuers:1"] = "oficina-mecanica-auth",

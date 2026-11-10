@@ -22,8 +22,8 @@ public sealed class OficinaMecanicaWebApplicationFactory
     // Segredo de teste — o mesmo injetado na configuração do host e usado para assinar os tokens
     private const string TestJwtSecret = "integration-test-jwt-secret-minimum-32-chars!!";
 
-    // Mesmos valores configurados via Jwt:Audience / Jwt:ValidIssuers abaixo — ver RFC-001 §4.1
-    // (contrato do token) e ADR-003 (dois emissores). O serviço de autenticação e a Lambda
+    // Mesmos valores configurados via Jwt:Audience / Jwt:ValidIssuers abaixo: o token precisa
+    // ter um dos dois emissores aceitos e a audience da API (ADR-003). O serviço de autenticação e a Lambda
     // emitem os tokens em produção; aqui são montados diretamente.
     private const string AppIssuer = "oficina-mecanica-app";
     private const string ClienteAuthIssuer = "oficina-mecanica-auth";
@@ -96,8 +96,8 @@ public sealed class OficinaMecanicaWebApplicationFactory
 
     /// <summary>
     /// Gera um token de papel Cliente assinado com o mesmo segredo de teste, simulando o
-    /// token que a Function Serverless (emissor "oficina-mecanica-auth") emitiria — ver
-    /// RFC-001 §4.1.
+    /// token que a Function Serverless (emissor "oficina-mecanica-auth") emitiria, com o
+    /// id do cliente no subject.
     /// </summary>
     public string GetClienteAuthToken(Guid clienteId) =>
         GerarToken(ClienteAuthIssuer, subject: clienteId.ToString(), role: "Cliente");
