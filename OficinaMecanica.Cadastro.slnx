@@ -5,7 +5,6 @@
   <Folder Name="/src/Modules/Cadastro/">
     <Project Path="src/Modules/Cadastro/Cadastro.Adapters/Cadastro.Adapters.csproj" />
     <Project Path="src/Modules/Cadastro/Cadastro.Application/Cadastro.Application.csproj" />
-    <Project Path="src/Modules/Cadastro/Cadastro.Contracts/Cadastro.Contracts.csproj" />
     <Project Path="src/Modules/Cadastro/Cadastro.Domain/Cadastro.Domain.csproj" />
     <Project Path="src/Modules/Cadastro/Cadastro.Infrastructure/Cadastro.Infrastructure.csproj" />
     <Project Path="src/Modules/Cadastro/Cadastro.Web/Cadastro.Web.csproj" />

@@ -7,7 +7,6 @@ using Cadastro.Application.Gateways;
 using Cadastro.Application.Servicos.Queries.ListarServicos;
 using Cadastro.Application.Veiculos.Queries.ListarVeiculos;
 using Cadastro.Application.Veiculos.Queries.ListarVeiculosPorCliente;
-using Cadastro.Contracts.Queries;
 using Cadastro.Infrastructure.Persistence;
 using Cadastro.Infrastructure.Persistence.Repositories;
 using Cadastro.Infrastructure.Queries;
@@ -60,14 +59,6 @@ public static class CadastroModule
         services.AddScoped<IListarServicosQuery, ListarServicosQueryImpl>();
         services.AddScoped<IListarVeiculosQuery, ListarVeiculosQueryImpl>();
         services.AddScoped<IListarVeiculosPorClienteQuery, ListarVeiculosPorClienteQueryImpl>();
-
-        #endregion
-
-        #region Queries públicas (contratos expostos aos outros módulos)
-
-        services.AddScoped<ICadastroClienteQuery, CadastroClienteQuery>();
-        services.AddScoped<ICadastroServicoQuery, CadastroServicoQuery>();
-        services.AddScoped<ICadastroVeiculoQuery, CadastroVeiculoQuery>();
 
         #endregion
 
