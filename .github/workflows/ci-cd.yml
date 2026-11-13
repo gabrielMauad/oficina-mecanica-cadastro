@@ -262,7 +262,9 @@ jobs:
           echo "Endpoint resolvido: $API_ENDPOINT"
 
           for i in $(seq 1 30); do
-            HTTP_STATUS=$(curl -sS --max-time 15 -o /tmp/healthz.json -w "%{http_code}" "$API_ENDPOINT/cadastro/healthz/ready" || echo "000")
+            # Em falha de conexao o curl ja imprime "000" via -w; o "|| true" so evita que o
+            # codigo de saida interrompa o loop (um "|| echo 000" duplicaria para "000000").
+            HTTP_STATUS=$(curl -sS --max-time 15 -o /tmp/healthz.json -w "%{http_code}" "$API_ENDPOINT/cadastro/healthz/ready" || true)
             if [ "$HTTP_STATUS" == "200" ]; then
               echo "OK: /cadastro/healthz/ready respondeu 200"
               cat /tmp/healthz.json; echo
