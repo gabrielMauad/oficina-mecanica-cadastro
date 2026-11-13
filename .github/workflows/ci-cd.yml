@@ -5,6 +5,18 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+# O workflow so le o codigo: nenhum passo escreve no repositorio nem em PRs (a publicacao vai para
+# o ECR e o EKS, autenticada pelas credenciais AWS dos secrets do environment).
+permissions:
+  contents: read
+
+# Um deploy por vez por branch: se outro push chegar durante um deploy em andamento, ele espera
+# na fila em vez de rodar em paralelo (dois "kubectl apply" simultaneos disputariam o mesmo
+# Deployment). Nunca cancela o deploy em andamento, para nao deixar o rollout pela metade.
+concurrency:
+  group: deploy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   AWS_REGION: us-east-1
   EKS_CLUSTER_NAME: oficina-mecanica
@@ -17,6 +29,10 @@ jobs:
   # build, por isso a ordem e restore -> sonarscanner begin -> build -> test -> sonarscanner end.
   # Ainda nao ha quality gate bloqueante: o resultado e publicado no SonarCloud, mas a pipeline
   # nao espera nem falha pelo veredito do gate.
+  #
+  # A analise do SonarCloud e opcional: sem o secret SONAR_TOKEN e as variables SONAR_PROJECT_KEY e
+  # SONAR_ORGANIZATION, restore, build, testes e cobertura rodam normalmente e apenas a analise e
+  # ignorada.
   build-test:
     name: Build & Test
     runs-on: ubuntu-latest
@@ -32,15 +48,35 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # Decide uma unica vez se a analise do Sonar roda; os passos do Sonar abaixo dependem de
+      # steps.sonar.outputs.enabled. O token so e entregue a este passo e aos passos do Sonar, via
+      # env - nunca ao restante do job.
+      - name: Detectar configuracao do SonarCloud
+        id: sonar
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+        run: |
+          if [ -n "$SONAR_TOKEN" ] && [ -n "$SONAR_PROJECT_KEY" ] && [ -n "$SONAR_ORGANIZATION" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::SonarCloud nao configurado (secret SONAR_TOKEN e/ou variables SONAR_PROJECT_KEY/SONAR_ORGANIZATION ausentes): analise ignorada; build, testes e cobertura seguem normalmente."
+          fi
+
       # O scanner do Sonar roda em Java; o runner ubuntu-latest nao garante a versao exigida.
       - name: Setup Java 17
+        if: steps.sonar.outputs.enabled == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
+      # Versao fixa para que o scanner nao mude sozinho entre execucoes.
       - name: Instalar dotnet-sonarscanner
-        run: dotnet tool install --global dotnet-sonarscanner
+        if: steps.sonar.outputs.enabled == 'true'
+        run: dotnet tool install --global dotnet-sonarscanner --version 12.1.0
 
       - name: Restore
         run: dotnet restore "${{ env.SOLUTION }}"
@@ -49,6 +85,7 @@ jobs:
       # linha de comando exibida no log. Migrations (codigo gerado) e Program.cs (composicao do
       # host, coberto apenas pelos testes de integracao) ficam fora do calculo de cobertura.
       - name: SonarCloud - begin
+        if: steps.sonar.outputs.enabled == 'true'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
@@ -71,6 +108,7 @@ jobs:
             --collect "XPlat Code Coverage;Format=opencover"
 
       - name: SonarCloud - end
+        if: steps.sonar.outputs.enabled == 'true'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
@@ -145,7 +183,7 @@ jobs:
 
       # Le os segredos do RDS deste servico e da aplicacao por NOME (nunca ARN - o ARN muda a cada
       # recriacao), monta o Secret do Kubernetes em runtime e aplica de forma idempotente. Nenhum
-      # valor e impresso no log: cada um recebe ::add-mask:: antes de qualquer outro uso.
+      # valor secreto e impresso no log: cada um recebe ::add-mask:: antes de qualquer outro uso.
       #
       # A license key da New Relic NAO vem do Secrets Manager - e um dado de conta de terceiro, nao
       # um recurso da AWS - e sim direto de um secret do GitHub (NEW_RELIC_LICENSE_KEY) para o
@@ -154,19 +192,27 @@ jobs:
         env:
           NEW_RELIC_LICENSE_KEY: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
         run: |
+          # A license key e obrigatoria: sem ela os pods subiriam sem enviar telemetria.
+          [ -n "$NEW_RELIC_LICENSE_KEY" ] || { echo "::error::secret NEW_RELIC_LICENSE_KEY ausente"; exit 1; }
+
           RDS_SECRET=$(aws secretsmanager get-secret-value \
             --secret-id oficina-mecanica/dev/rds/cadastro --query SecretString --output text)
           APP_SECRET=$(aws secretsmanager get-secret-value \
             --secret-id oficina-mecanica/dev/app --query SecretString --output text)
 
-          DB_HOST=$(echo "$RDS_SECRET" | jq -r .host)
-          DB_PORT=$(echo "$RDS_SECRET" | jq -r .port)
-          DB_NAME=$(echo "$RDS_SECRET" | jq -r .dbname)
-          DB_USER=$(echo "$RDS_SECRET" | jq -r .username)
-          DB_PASSWORD=$(echo "$RDS_SECRET" | jq -r .password)
-          JWT_SECRET=$(echo "$APP_SECRET" | jq -r .jwt_secret)
+          DB_HOST=$(echo "$RDS_SECRET" | jq -er .host)
+          DB_PORT=$(echo "$RDS_SECRET" | jq -er .port)
+          DB_NAME=$(echo "$RDS_SECRET" | jq -er .dbname)
+          DB_USER=$(echo "$RDS_SECRET" | jq -er .username)
+          DB_PASSWORD=$(echo "$RDS_SECRET" | jq -er .password)
+          JWT_SECRET=$(echo "$APP_SECRET" | jq -er .jwt_secret)
 
-          for v in "$DB_HOST" "$DB_PORT" "$DB_NAME" "$DB_USER" "$DB_PASSWORD" "$JWT_SECRET" "$NEW_RELIC_LICENSE_KEY"; do
+          # Mascara apenas o que e segredo. DB_HOST, DB_PORT, DB_NAME e DB_USER ficam de fora de
+          # proposito: sao identificadores, nao credenciais, e mascara-los trocaria por "***"
+          # qualquer trecho do log que contenha o mesmo texto (a porta, "cadastro", "oficina" em
+          # nomes de recursos do kubectl, no smoke test etc.), tornando o log ilegivel. Os valores
+          # derivados que embutem segredo (connection string e header OTLP) sao mascarados abaixo.
+          for v in "$DB_PASSWORD" "$JWT_SECRET" "$NEW_RELIC_LICENSE_KEY"; do
             echo "::add-mask::$v"
           done
 
@@ -216,7 +262,7 @@ jobs:
           echo "Endpoint resolvido: $API_ENDPOINT"
 
           for i in $(seq 1 30); do
-            HTTP_STATUS=$(curl -sS -o /tmp/healthz.json -w "%{http_code}" "$API_ENDPOINT/cadastro/healthz/ready" || echo "000")
+            HTTP_STATUS=$(curl -sS --max-time 15 -o /tmp/healthz.json -w "%{http_code}" "$API_ENDPOINT/cadastro/healthz/ready" || echo "000")
             if [ "$HTTP_STATUS" == "200" ]; then
               echo "OK: /cadastro/healthz/ready respondeu 200"
               cat /tmp/healthz.json; echo
