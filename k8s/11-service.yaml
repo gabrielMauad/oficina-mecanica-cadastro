@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cadastro
+  namespace: oficina-mecanica
+  labels:
+    app: cadastro
+    app.kubernetes.io/part-of: oficina-mecanica
+spec:
+  # NodePort 30082 = porta do listener do servico na NLB interna (infra-k8s); o API Gateway chega
+  # aqui via VPC Link. Dentro do cluster o servico responde em cadastro.oficina-mecanica:80.
+  type: NodePort
+  selector:
+    app: cadastro
+  ports:
+    - port: 80
+      targetPort: 8080
+      nodePort: 30082
