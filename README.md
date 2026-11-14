@@ -255,9 +255,7 @@ curl "$API_URL/cadastro/openapi/v1.json"
 curl "$API_URL/cadastro/healthz/ready"
 ```
 
-`GET /cadastro/healthz/ready` chega ao pod como `GET /healthz/ready`. A coleção de requisições do
-sistema inteiro fica no repositório
-[`oficina-mecanica-app`](https://github.com/gabrielMauad/oficina-mecanica-app/blob/main/docs/guias/collection_bruno.yml).
+`GET /cadastro/healthz/ready` chega ao pod como `GET /healthz/ready`. As coleções de requisições do sistema inteiro ficam no repositório `oficina-mecanica-app`: [Bruno](https://github.com/gabrielMauad/oficina-mecanica-app/blob/main/docs/guias/collection_bruno.yml) e [Postman](https://github.com/gabrielMauad/oficina-mecanica-app/blob/main/docs/guias/collection_postman.json).
 
 No API Gateway, as rotas de negócio deste serviço são `ANY /api/v1/clientes`,
 `/api/v1/clientes/{proxy+}`, `/api/v1/veiculos`, `/api/v1/veiculos/{proxy+}`, `/api/v1/servicos` e
@@ -338,8 +336,8 @@ dotnet test tests/SharedKernel/SharedKernel.Application.Tests
   *Gate de cobertura (linhas >= 80%)* do job **Build & Test** no run da `main`
   [43552010167](https://github.com/gabrielMauad/oficina-mecanica-cadastro/actions/runs/43552010167)
   (commit `bcd9d66`; [log do job](https://github.com/gabrielMauad/oficina-mecanica-cadastro/actions/runs/43552010167/job/132316384573)).
-  O job **Build & Test** desse run terminou verde; os jobs seguintes (imagem e deploy) dependem das
-  credenciais de sessão da AWS Academy — ver [a limitação](#deploy-no-eks-e-limitação-da-aws-academy).
+  O run da `main` aparece como falho: o job de imagem falha ao carregar as credenciais de sessão da AWS Academy e o deploy é pulado; o `Build & Test` (com o gate de cobertura) está verde — ver
+  [a limitação](#deploy-no-eks-e-limitação-da-aws-academy).
 - <!-- sonarcloud-link -->SonarCloud: projeto ainda não configurado neste repositório; o link público
   do projeto e a nota serão registrados aqui quando a análise estiver ativa.
 
@@ -364,7 +362,7 @@ reportgenerator "-reports:**/coverage.opencover.xml" "-targetdir:coverage-report
 
 1. **Build & Test** — `dotnet restore/build/test` na `OficinaMecanica.Cadastro.slnx`, relatórios
    OpenCover por projeto de teste e o **gate de cobertura**, que falha o job se a cobertura de linhas
-   ficar abaixo de 80 %. O nome do job é o referenciado pela proteção da `main`. A análise do
+   ficar abaixo de 80 %. O nome do job `Build & Test` é mantido estável porque é o status check a ser exigido na proteção da `main`. A análise do
    SonarCloud é opcional: roda só se existirem o secret `SONAR_TOKEN` e as variables
    `SONAR_PROJECT_KEY` e `SONAR_ORGANIZATION`; sem eles, build, testes e gate seguem normalmente.
 2. **Build & Push image (ECR)** — constrói a imagem pelo `src/Bootstrap/Api/Dockerfile` e publica no
@@ -405,9 +403,7 @@ Gateway chega ao pod via VPC Link → NLB → NodePort. Dentro do cluster, o ser
 IAM; por isso a federação OIDC entre o GitHub Actions e a AWS não é possível
 ([ADR-006](https://github.com/gabrielMauad/oficina-mecanica-app/blob/main/docs/arquitetura/adrs/006-credenciais-de-nuvem-no-cicd.md)).
 As pipelines autenticam com as **credenciais temporárias de sessão** do laboratório, guardadas como
-secrets do repositório e **renovadas manualmente a cada sessão**. Com credenciais vencidas, os jobs de
-imagem e deploy falham no passo *Configure AWS credentials* (é o que se vê no run da `main` citado
-acima), enquanto `Build & Test` continua independente da AWS. Para publicar de novo: atualize os três
+secrets do repositório e **renovadas manualmente a cada sessão**. Com credenciais vencidas, o job de imagem falha no passo *Configure AWS credentials* e o deploy é pulado (é o que se vê no run da `main` citado acima, que aparece como falho), enquanto o `Build & Test` continua independente da AWS e verde. Para publicar de novo: atualize os três
 secrets de sessão e reexecute o **CI/CD** por `workflow_dispatch` (aba *Actions* → *CI/CD* →
 *Run workflow*) ou *Re-run* do run — não é necessário um novo commit.
 
