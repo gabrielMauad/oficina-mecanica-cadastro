@@ -19,6 +19,8 @@ public sealed class AdicionarServicoValidator : AbstractValidator<AdicionarServi
 
         RuleFor(x => x.Preco)
             .GreaterThanOrEqualTo(0)
-            .WithMessage("O preço do serviço não deve ser negativo.");
+            .WithMessage("O preço do serviço não deve ser negativo.")
+            .PrecisionScale(10, 2, true)
+            .WithMessage("O preço do serviço deve ter no máximo 8 dígitos inteiros e 2 casas decimais.");
     }
 }

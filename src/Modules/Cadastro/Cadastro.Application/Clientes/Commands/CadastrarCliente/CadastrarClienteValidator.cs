@@ -19,6 +19,8 @@ public sealed class CadastrarClienteValidator : AbstractValidator<CadastrarClien
 
         RuleFor(x => x.Email)
             .NotEmpty()
+            .MaximumLength(200)
+            .WithMessage("Email deve ter no máximo 200 caracteres.")
             .Matches(@"^[^@\s]+@[^@\s]+\.[^@\s]+$")
             .WithMessage("Email inválido.");
 

@@ -921,6 +921,91 @@ public class CadastroEndpointsTests
     }
 
     // =========================================================================
+    // Limites de coluna: valores acima do que o banco comporta voltam como 422, nunca 500
+    // =========================================================================
+
+    [Fact(DisplayName = "POST /clientes com e-mail acima de 200 caracteres — retorna 422")]
+    public async Task CriarCliente_DeveRetornar422_QuandoEmailExcedeLimiteDaColuna()
+    {
+        // Arrange
+        using var client = _factory.CreateAuthenticatedClient(_factory.GetOficinaToken());
+        var email = new string('a', 196) + "@x.com"; // 202 caracteres
+
+        var command = new
+        {
+            Nome = TestData.Nome("Cliente Email Longo"),
+            Documento = TestData.Cpf(),
+            Email = email,
+            Telefone = "31999990001",
+            PessoaFisica = true
+        };
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/v1/clientes", command);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
+
+    [Theory(DisplayName = "POST /servicos com preço fora de numeric(10,2) — retorna 422")]
+    [InlineData("100000000.00")]
+    [InlineData("99999999999")]
+    [InlineData("10.999")]
+    public async Task CriarServico_DeveRetornar422_QuandoPrecoExcedePrecisaoDaColuna(string preco)
+    {
+        // Arrange
+        using var client = _factory.CreateAuthenticatedClient(_factory.GetOficinaToken());
+        var json = $$"""{"nome":"{{TestData.Nome("Servico Preco Alto")}}","descricao":null,"preco":{{preco}}}""";
+
+        // Act
+        var response = await client.PostAsync(
+            "/api/v1/servicos", new StringContent(json, System.Text.Encoding.UTF8, "application/json"));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
+
+    [Fact(DisplayName = "POST /servicos com preço no limite de numeric(10,2) — retorna 201")]
+    public async Task CriarServico_DeveRetornar201_QuandoPrecoNoLimiteDaColuna()
+    {
+        // Arrange
+        using var client = _factory.CreateAuthenticatedClient(_factory.GetOficinaToken());
+        var json = $$"""{"nome":"{{TestData.Nome("Servico Preco Limite")}}","descricao":null,"preco":99999999.99}""";
+
+        // Act
+        var response = await client.PostAsync(
+            "/api/v1/servicos", new StringContent(json, System.Text.Encoding.UTF8, "application/json"));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [Theory(DisplayName = "PATCH /servicos/{id}/preco com preço fora de numeric(10,2) — retorna 422")]
+    [InlineData("100000000.00")]
+    [InlineData("1.005")]
+    public async Task AtualizarPrecoServico_DeveRetornar422_QuandoPrecoExcedePrecisaoDaColuna(string preco)
+    {
+        // Arrange
+        using var client = _factory.CreateAuthenticatedClient(_factory.GetOficinaToken());
+        var createResponse = await client.PostAsJsonAsync("/api/v1/servicos", new
+        {
+            Nome = TestData.Nome("Servico Patch Preco"),
+            Descricao = (string?)null,
+            Preco = 10.00m
+        });
+        createResponse.EnsureSuccessStatusCode();
+        var created = await createResponse.Content.ReadFromJsonAsync<ServicoCriadoResponse>(JsonOptions);
+
+        // Act
+        var response = await client.PatchAsync(
+            $"/api/v1/servicos/{created!.ServicoId}/preco",
+            new StringContent($$"""{"preco":{{preco}}}""", System.Text.Encoding.UTF8, "application/json"));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
+
+    // =========================================================================
     // DTOs locais para desserialização
     // Padrão do projeto: POSTs retornam *Id, GETs retornam Id
     // =========================================================================

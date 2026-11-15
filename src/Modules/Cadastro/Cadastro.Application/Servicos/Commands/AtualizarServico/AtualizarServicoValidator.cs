@@ -18,6 +18,8 @@ public sealed class AtualizarServicoValidator : AbstractValidator<AtualizarServi
         RuleFor(x => x.Preco)
             .GreaterThanOrEqualTo(0)
             .WithMessage("Preço deve ser maior ou igual a zero.")
+            .PrecisionScale(10, 2, true)
+            .WithMessage("Preço deve ter no máximo 8 dígitos inteiros e 2 casas decimais.")
             .When(x => x.Preco is not null);
     }
 }
